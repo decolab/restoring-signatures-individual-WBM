@@ -1,0 +1,224 @@
+# ============================================================================
+#  Restoring Signatures of Consciousness – Whole-Brain Model
+#  CONFIGURATION FILE
+# ============================================================================
+#
+#  This file contains ALL parameters used by every script in the pipeline.
+#  Scripts load it with:
+#
+#      import yaml
+#      with open("config.yaml") as f:
+#          CONFIG = yaml.safe_load(f)
+#
+#  Then access values like:
+#
+#      tr = CONFIG["model"]["time_repetition"]   # 1.25 seconds
+#
+#  If you want to change a parameter, change it HERE and it will take
+#  effect in every script that uses it.
+# ============================================================================
+
+
+# ---- Project info ----------------------------------------------------------
+project_name: macaque_dbs_awakening
+description: "Modelling DBS stimulation to awake monkeys from anesthesia"
+
+
+# ---- Subjects and their experimental conditions ---------------------------
+#
+# Each subject (macaque) has a list of conditions they were recorded in.
+# "stim_off" = anesthesia (without stimulation)
+# "stim_on_Xv" = central thalamic (CT) stimulation at X volts
+# "stim_cont_on_Xv" = ventrolateral thalamic (VL) stimulation at X volts
+# "awake_bold" = awake resting state
+#
+subjects:
+  taro:   [stim_off, stim_on_3v, stim_on_5v, stim_cont_on_3v, stim_cont_on_5v]
+  nori:   [stim_off, stim_on_3v, stim_on_5v]
+  jade:   [awake_bold]
+  bogey:  [awake_bold]
+  yoshi:  [awake_bold]
+
+# Trials to exclude (0-indexed) due to artefacts or quality issues
+problem_indices:
+  nori:
+    stim_off:    [0, 1, 3, 4, 6, 13]
+    stim_on_3v:  [10, 11]
+    stim_on_5v:  []
+  taro:
+    stim_off:         []
+    stim_on_3v:       []
+    stim_on_5v:       []
+    stim_cont_on_3v:  []
+    stim_cont_on_5v:  []
+  jade:   { awake_bold: [] }
+  bogey:  { awake_bold: [] }
+  yoshi:  { awake_bold: [] }
+
+
+# ---- Whole-brain model parameters -----------------------------------------
+model:
+  num_parcels:         82        # Number of brain regions (CoCoMac atlas)
+  time_repetition:     1.25      # TR in seconds (fMRI sampling interval)
+  time_points:         500       # BOLD samples per simulation
+  num_subsimulations:  20        # Simulations averaged per fitness evaluation
+  dt:                  0.0625    # Integration time step (seconds) - has been changed from 0.01 for testing purposes
+  sig:                 0.04      # Noise amplitude
+  sc_normalisation_max: 1        # SC matrix rescaled so max = this value
+  use_parallel:        true      # Set to true to use parallel processing
+  max_workers:         10        # Number of CPU cores for parallel mode
+
+
+# ---- Bandpass filter (Butterworth) -----------------------------------------
+filter:
+  lowpass:   0.0025   # Lower frequency bound (Hz)
+  highpass:  0.05     # Upper frequency bound (Hz)
+  order:     2        # Butterworth filter order
+
+
+# ---- Genetic algorithm parameters -----------------------------------------
+ga:
+  population_size:       20      # Number of genomes per generation
+  genome_length:         41      # Homotopic bifurcation parameters (left=right)
+  fitness_limit:         0.8     # Stop early when best SSIM reaches this
+  generation_limit:      200     # Maximum number of generations
+  convergence_limit:     0.0001  # Stop when fitness std drops below this
+  convergence_window:    10      # Generations to check for convergence
+  number_of_elites:      2       # Best genomes kept unchanged each generation
+  mutation_probability:  0.01    # Probability that each gene mutates
+  number_of_mutations:   1       # Mutation attempts per offspring
+
+
+# ---- VAE (Variational Autoencoder) parameters ------------------------------
+vae:
+  latent_dim:       2       # 2D latent space for visualisation
+  intermediate_dim: 1028    # Hidden layer size
+  batch_size:       256     # Training batch size
+  epochs:           5       # Training epochs
+  train_split:      0.7     # Fraction used for training (rest = validation)
+  # Which conditions to use for training the VAE:
+  training_conditions: [stim_off, stim_on_5v, stim_cont_on_5v]
+
+
+# ---- Perturbation parameters -----------------------------------------------
+perturbation:
+  amplitudes: [0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0]
+  num_fcs_per_amplitude: 50    # FC matrices generated per amplitude
+  types: [wave, noise, sync]   # Available perturbation types
+
+
+# ---- Data augmentation -----------------------------------------------------
+augmentation:
+  num_fcs: 5000   # Surrogate FCs generated per condition
+
+
+# ---- File paths (relative to this folder) ----------------------------------
+paths:
+  structural_connectivity: data/SC.txt
+  timeseries_dict:         data/ts_dict.npy
+  node_frequencies:        data/node_frequencies.npy
+  empirical_fcs:           data/FC_empirical.npy
+  region_metadata:         data/metadata_DBS.tsv
+  ga_checkpoint:           outputs/ga_checkpoint.npz
+  ga_best_genomes:         outputs/ga_best_genomes.npy
+  augmented_fcs:           outputs/augmented_fcs.npy
+  augmented_labels:        outputs/augmented_labels.npy
+  vae_weights:             outputs/vae_weights.weights.h5
+  perturbation_fcs:        outputs/perturbation_fcs/
+  figures:                 outputs/figures/
+  tables:                  outputs/tables/
+
+
+# ---- Human-readable condition names (for plots) ----------------------------
+condition_names:
+  stim_off:        "Anesthesia"
+  stim_on_3v:      "CT 3V"
+  stim_on_5v:      "CT 5V"
+  stim_cont_on_3v: "VL 3V"
+  stim_cont_on_5v: "VL 5V"
+  awake_bold:      "Awake"
+
+# ---- Condition colours (for plots) -----------------------------------------
+condition_colors:
+  stim_off:        "#000000" # black
+  stim_on_3v:      "#6666ff" # light lilac = (0.4, 0.4, 1.0)
+  stim_on_5v:      "#800080" # purple
+  stim_cont_on_3v: "#ff6666" # pink/light salmon = (1.0, 0.4, 0.4) 
+  stim_cont_on_5v: "#ff0000" # red
+  awake_bold:      "#008000" # green
+
+# ---- Human-readable metric names (for plots) -----------------------------------------
+metric_names:
+  mean_FC:         "Mean FC"
+  modularity:      "Modularity"
+  FS_delta:        "FS-delta"
+
+# ---- Metric colours (for plots) -----------------------------------------
+metric_colors:
+  mean_FC:         "tab:blue"
+  modularity:      "tab:orange"
+  FS_delta:        "tab:green"
+
+# ---- Brain area names (82 regions = 41 left + 41 right) -------------------
+#
+# The CoCoMac parcellation has 41 areas per hemisphere.
+# Index 0-40 = left hemisphere, 41-81 = right hemisphere (mirrored).
+#
+brain_areas:
+  - [0,  "Temporal polar",                    "TCpol"]
+  - [1,  "Superior temporal cortex",          "TCs"]
+  - [2,  "Amygdala",                          "Amyg"]
+  - [3,  "Orbitoinferior prefrontal cortex",  "PFCoi"]
+  - [4,  "Anterior insula",                   "Ia"]
+  - [5,  "Orbitomedial prefrontal cortex",    "PFCom"]
+  - [6,  "Central temporal cortex",           "TCc"]
+  - [7,  "Orbitolateral prefrontal cortex",   "PFCol"]
+  - [8,  "Inferior temporal",                 "TCi"]
+  - [9,  "Parahippocampal cortex",            "PHC"]
+  - [10, "Gustatory cortex",                  "G"]
+  - [11, "Ventrolateral premotor cortex",     "PMCvl"]
+  - [12, "Anterior visual area (ventral)",    "VACv"]
+  - [13, "Posterior insula",                  "Ip"]
+  - [14, "Prefrontal polar cortex",           "PFCpol"]
+  - [15, "Hippocampus",                       "HC"]
+  - [16, "Subgenual cingulate cortex",        "CCs"]
+  - [17, "Ventrolateral prefrontal cortex",   "PFCvl"]
+  - [18, "Visual area 2",                     "V2"]
+  - [19, "Medial prefrontal cortex",          "PFCm"]
+  - [20, "Ventral temporal cortex",           "TCv"]
+  - [21, "Anterior visual area (dorsal)",     "VACd"]
+  - [22, "Visual area 1",                     "V1"]
+  - [23, "Centrolateral prefrontal cortex",   "PFCcl"]
+  - [24, "Secondary auditory cortex",         "A2"]
+  - [25, "Retrosplenial cingulate cortex",    "CCr"]
+  - [26, "Posterior cingulate cortex",        "CCp"]
+  - [27, "Anterior cingulate cortex",         "CCa"]
+  - [28, "Secondary somatosensory cortex",    "S2"]
+  - [29, "Primary somatosensory cortex",      "S1"]
+  - [30, "Primary auditory cortex",           "A1"]
+  - [31, "Primary motor cortex",              "M1"]
+  - [32, "Inferior parietal cortex",          "PCi"]
+  - [33, "Medial parietal cortex",            "PCm"]
+  - [34, "Dorsomedial prefrontal cortex",     "PFCdm"]
+  - [35, "Intraparietal cortex",              "PCip"]
+  - [36, "Superior parietal cortex",          "PCs"]
+  - [37, "Frontal eye field",                 "FEF"]
+  - [38, "Dorsolateral prefrontal cortex",    "PFCdl"]
+  - [39, "Medial premotor cortex",            "PMCm"]
+  - [40, "Dorsolateral premotor cortex",      "PMCdl"]
+
+
+# ---- Perturbation targets (bilateral indices) ------------------------------
+#
+# Each target lists the brain region indices that get perturbed.
+# For bilateral targets: left index + (left index + 41) for right hemisphere.
+#
+perturbation_targets:
+  V2:    [18, 59]       # Visual area 2 (left=18, right=18+41=59)
+  PFCm:  [19, 60]       # Medial prefrontal cortex
+  PMCvl: [11, 52]       # Ventrolateral premotor cortex
+  HC:    [15, 56]       # Hippocampus
+  GNW:   [26, 27, 35, 37, 38, 14, 40, 67, 68, 76, 78, 79, 55, 81]
+  # GNW = Global Neuronal Workspace nodes (7 left + 7 right):
+  #   Left:  CCp(26), CCa(27), PCip(35), FEF(37), PFCdl(38), PFCpol(14), PMCdl(40)
+  #   Right: same + 41
